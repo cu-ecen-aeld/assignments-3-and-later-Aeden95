@@ -37,11 +37,11 @@ if [ ! -e ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ]; then
     cd linux-stable
     echo "Checking out version ${KERNEL_VERSION}"
     git checkout ${KERNEL_VERSION}
-    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j8 mrproper
-    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j8 defconfig
+    #make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j8 mrproper
+    #make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j8 defconfig
     make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j8 all
     #make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} modules
-    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j8 dtbs
+    #make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j8 dtbs
 fi
 
 echo "Adding the Image in outdir"
@@ -85,6 +85,14 @@ echo "Library dependencies"
 cd ${OUTDIR}/rootfs
 ${CROSS_COMPILE}readelf -a bin/busybox | grep "program interpreter"
 ${CROSS_COMPILE}readelf -a bin/busybox | grep "Shared library"
+
+if [ -f "bin/busybox" ]; then
+    sudo chown root:root "bin/busybox"
+    sudo chmod 4755 "bin/busybox"  # Set the setuid bit
+else
+    echo "BusyBox binary not found at $BUSYBOX_BINARY"
+    exit 1
+fi
 
 cp -a ${SYSROOT}/lib/ld-linux-aarch64.so.1 ${OUTDIR}/rootfs/lib
 cp -a ${SYSROOT}/lib64/ld-2.31.so ${OUTDIR}/rootfs/lib64
