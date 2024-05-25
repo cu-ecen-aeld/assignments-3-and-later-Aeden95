@@ -37,10 +37,11 @@ if [ ! -e ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ]; then
     cd linux-stable
     echo "Checking out version ${KERNEL_VERSION}"
     git checkout ${KERNEL_VERSION}
-    make -j 8 ARCH=$ARCH CROSS_COMPILE=${CROSS_COMPILE} mrproper
-    make -j 8 ARCH=$ARCH CROSS_COMPILE=${CROSS_COMPILE} defconfig
-    make -j 8 ARCH=$ARCH CROSS_COMPILE=${CROSS_COMPILE} dtbs
-    make -j 8 ARCH=$ARCH CROSS_COMPILE=${CROSS_COMPILE} all
+    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j8 mrproper
+    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j8 defconfig
+    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j8 all
+    #make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} modules
+    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j8 dtbs
 fi
 
 echo "Adding the Image in outdir"
@@ -76,8 +77,7 @@ else
 fi
 
 # busy box 
-make distclean
-make defconfig
+make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} defconfig
 make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE}
 make CONFIG_PREFIX=${OUTDIR}/rootfs ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} install
 
@@ -86,16 +86,14 @@ cd ${OUTDIR}/rootfs
 ${CROSS_COMPILE}readelf -a bin/busybox | grep "program interpreter"
 ${CROSS_COMPILE}readelf -a bin/busybox | grep "Shared library"
 
-# TODO: Add library dependencies to rootfs
-export SYSROOT=$(${CROSS_COMPILE}gcc -print-sysroot)
-cp -a $SYSROOT/lib64/libresolv-2.31.so lib64
-cp -a $SYSROOT/lib64/libc.so.6 lib64
-cp -a $SYSROOT/lib64/libc-2.31.so lib64
-cp -a $SYSROOT/lib/ld-linux-aarch64.so.1 lib
-cp -a $SYSROOT/lib64/ld-2.31.so lib64
-cp -a $SYSROOT/lib64/libm.so.6 lib64
-cp -a $SYSROOT/lib64/libresolv.so.2 lib64
-cp -a $SYSROOT/lib64/libm-2.31.so lib64
+cp -a ${SYSROOT}/lib/ld-linux-aarch64.so.1 ${OUTDIR}/rootfs/lib
+cp -a ${SYSROOT}/lib64/ld-2.31.so ${OUTDIR}/rootfs/lib64
+cp -a ${SYSROOT}/lib64/libm.so.6 ${OUTDIR}/rootfs/lib64
+cp -a ${SYSROOT}/lib64/libm-2.31.so ${OUTDIR}/rootfs/lib64
+cp -a ${SYSROOT}/lib64/libresolv.so.2 ${OUTDIR}/rootfs/lib64
+cp -a ${SYSROOT}/lib64/libresolv-2.31.so ${OUTDIR}/rootfs/lib64
+cp -a ${SYSROOT}/lib64/libc.so.6 ${OUTDIR}/rootfs/lib64
+cp -a ${SYSROOT}/lib64/libc-2.31.so ${OUTDIR}/rootfs/lib64
 
 
 
