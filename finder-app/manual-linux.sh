@@ -38,7 +38,7 @@ if [ ! -e ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ]; then
     make -j 16 ARCH=$ARCH CROSS_COMPILE=${CROSS_COMPILE} defconfig
     make -j 16 ARCH=$ARCH CROSS_COMPILE=${CROSS_COMPILE} dtbs
     # make -j 8 ARCH=$ARCH CROSS_COMPILE=${CROSS_COMPILE} modules
-    make -j 16 ARCH=$ARCH CROSS_COMPILE=${CROSS_COMPILE} all
+    # make -j 16 ARCH=$ARCH CROSS_COMPILE=${CROSS_COMPILE} all
 fi
 
 echo "Adding the Image in outdir"
@@ -75,7 +75,7 @@ else
     cd busybox
 fi
 
-make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} defconf
+make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE}
 make CONFIG_PREFIX=${OUTDIR}/rootfs ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} install
 
 echo "Library dependencies"
