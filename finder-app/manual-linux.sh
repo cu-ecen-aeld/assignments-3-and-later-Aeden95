@@ -1,4 +1,4 @@
-#!/bin/bash
+!/bin/bash
 # Script outline to install and build kernel.
 # Author: Siddhant Jajoo.
 
@@ -12,6 +12,8 @@ BUSYBOX_VERSION=1_33_1
 FINDER_APP_DIR=$(realpath $(dirname $0))
 ARCH=arm64
 CROSS_COMPILE=aarch64-none-linux-gnu-
+
+CURRENT_DIR=$(pwd)
 
 if [ $# -lt 1 ]
 then
@@ -28,20 +30,21 @@ if [ ! -d "${OUTDIR}/linux-stable" ]; then
     #Clone only if the repository does not exist.
 	echo "CLONING GIT LINUX STABLE VERSION ${KERNEL_VERSION} IN ${OUTDIR}"
 	git clone ${KERNEL_REPO} --depth 1 --single-branch --branch ${KERNEL_VERSION}
+    # wget https://github.com/bwalle/ptxdist-vetero/blob/f1332461242e3245a47b4685bc02153160c0a1dd/patches/linux-5.0/dtc-multiple-definition.patch
+    # git apply dtc-multiple-definition.patch
 fi
 if [ ! -e ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ]; then
     cd linux-stable
     echo "Checking out version ${KERNEL_VERSION}"
     git checkout ${KERNEL_VERSION}
-
-    make -j 32 ARCH=$ARCH CROSS_COMPILE=${CROSS_COMPILE} mrproper
-    make -j 32 ARCH=$ARCH CROSS_COMPILE=${CROSS_COMPILE} defconfig
-    make -j 32 ARCH=$ARCH CROSS_COMPILE=${CROSS_COMPILE} dtbs
-    # make -j 8 ARCH=$ARCH CROSS_COMPILE=${CROSS_COMPILE} modules
-    make -j 32 ARCH=$ARCH CROSS_COMPILE=${CROSS_COMPILE} all
+    make -j 8 ARCH=$ARCH CROSS_COMPILE=${CROSS_COMPILE} mrproper
+    make -j 8 ARCH=$ARCH CROSS_COMPILE=${CROSS_COMPILE} defconfig
+    make -j 8 ARCH=$ARCH CROSS_COMPILE=${CROSS_COMPILE} dtbs
+    make -j 8 ARCH=$ARCH CROSS_COMPILE=${CROSS_COMPILE} all
 fi
 
 echo "Adding the Image in outdir"
+cp ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ${OUTDIR}/
 
 echo "Creating the staging directory for the root filesystem"
 cd "$OUTDIR"
@@ -51,17 +54,14 @@ then
     sudo rm  -rf ${OUTDIR}/rootfs
 fi
 
-mkdir -p ${OUTDIR}/rootfs
+# TODO: Create necessary base directories
 
-# Create necessary base directories
-cd ${OUTDIR}/rootfs
-mkdir -p bin dev etc home lib lib64 proc sbin sys tmp usr var
+cd $OUTDIR
+mkdir rootfs
+cd rootfs
+mkdir -p lib lib64 proc sbin sys tmp usr var bin dev etc home
 mkdir -p usr/bin usr/lib usr/sbin
 mkdir -p var/log
-
-# Set permissions for rootfs
-sudo chown -R root:root ${OUTDIR}/rootfs
-sudo chmod -R 755 ${OUTDIR}/rootfs
 
 cd "$OUTDIR"
 if [ ! -d "${OUTDIR}/busybox" ]
@@ -70,11 +70,14 @@ git clone git://busybox.net/busybox.git
     cd busybox
     git checkout ${BUSYBOX_VERSION}
     git switch -c ${BUSYBOX_VERSION}
-    make defconfig
+    # TODO:  Configure busybox
 else
     cd busybox
 fi
 
+# busy box 
+make distclean
+make defconfig
 make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE}
 make CONFIG_PREFIX=${OUTDIR}/rootfs ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} install
 
@@ -82,15 +85,19 @@ echo "Library dependencies"
 cd ${OUTDIR}/rootfs
 ${CROSS_COMPILE}readelf -a bin/busybox | grep "program interpreter"
 ${CROSS_COMPILE}readelf -a bin/busybox | grep "Shared library"
+
+# TODO: Add library dependencies to rootfs
 export SYSROOT=$(${CROSS_COMPILE}gcc -print-sysroot)
-cp -a $SYSROOT/lib/ld-linux-aarch64.so.1 lib
-cp -a $SYSROOT/lib64/ld-2.31.so lib64
-cp -a $SYSROOT/lib64/libm.so.6 lib64
-cp -a $SYSROOT/lib64/libm-2.31.so lib64
-cp -a $SYSROOT/lib64/libresolv.so.2 lib64
 cp -a $SYSROOT/lib64/libresolv-2.31.so lib64
 cp -a $SYSROOT/lib64/libc.so.6 lib64
 cp -a $SYSROOT/lib64/libc-2.31.so lib64
+cp -a $SYSROOT/lib/ld-linux-aarch64.so.1 lib
+cp -a $SYSROOT/lib64/ld-2.31.so lib64
+cp -a $SYSROOT/lib64/libm.so.6 lib64
+cp -a $SYSROOT/lib64/libresolv.so.2 lib64
+cp -a $SYSROOT/lib64/libm-2.31.so lib64
+
+
 
 
 cd $CURRENT_DIR
@@ -110,6 +117,12 @@ cd ${OUTDIR}/rootfs
 sudo mknod -m 666 dev/null c 1 3
 sudo mknod -m 600 dev/console c 5 1
 
+
+# TODO: Chown the root directory
+cd ${OUTDIR}/rootfs
+sudo chown -R root:root *
+
+# TODO: Create initramfs.cpio.gz
 find . | cpio -H newc -ov --owner root:root > ../initramfs.cpio
 cd ..
 gzip initramfs.cpio
